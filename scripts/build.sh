@@ -28,9 +28,7 @@ export GOPATH="$(pwd)/.gopath"
 git clone git@github.com:ninjasphere/go-ninja.git $GOPATH/src/github.com/ninjasphere/go-ninja
 
 #check out special branch for dependency
-cd .gopath/src/github.com/ninjasphere/gatt
-git checkout 'feature/client'
-cd -
+git clone -b 'feature/client' git@github.com:ninjasphere/go-ninja.git $GOPATH/src/github.com/ninjasphere/gatt
 
 # move the working path and build
 cd .gopath/src/github.com/${OWNER}/${PROJECT_NAME}
