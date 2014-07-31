@@ -1,0 +1,13 @@
+{
+  "name": "driver-ble",
+  "version": "0.0.1",
+  "description": "Ninja Sphere - BLE Driver",
+  "main": "main.go",
+  "author": "Ninja Blocks <support@ninjablocks.com>",
+  "contributors": [
+    "Theo Julienne <theo@ninjablocks.com>",
+    "Elliot Shepherd <elliot@ninjablocks.com>"
+  ],
+  "license": "MIT",
+  "maxMemory": 10
+}
