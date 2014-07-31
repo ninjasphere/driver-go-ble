@@ -38,7 +38,7 @@ var log = logger.GetLogger("driver-go-ble")
     self.bus.publish('$device/' + packet.device.replace(/[:\r\n]/g, '') + '/TEMPPATH/rssi', packet);*/
 
 func sendRssi(device string, waypoint string, rssi int8, conn *ninja.NinjaConnection) {
-	log.Infof(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
+	log.Debugf(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
 
 	packet, _ := simplejson.NewJson([]byte(`{
 			"device": "",
@@ -121,6 +121,15 @@ func realMain() int {
 
 			// XXX: Yes, magic numbers.... this enables the notification from our Waypoints
 			client.Notify(device.Address, true, 45, 48, true, false)
+		}
+
+		device.Disconnected = func() {
+			log.Infof("Disconnceted from waypoint: %s", device.Address)
+
+			err := client.Connect(device.Address, device.PublicAddress)
+			if err != nil {
+				log.Errorf("Connect error:%s", err)
+			}
 		}
 
 		device.Notification = func(notification *gatt.Notification) {
