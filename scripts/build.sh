@@ -27,10 +27,16 @@ export GOPATH="$(pwd)/.gopath"
 # Clone our internal commons package
 git clone git@github.com:ninjasphere/go-ninja.git $GOPATH/src/github.com/ninjasphere/go-ninja
 
+#check out special branch for dependency
+cd .gopath/src/github.com/ninjasphere/gatt
+git checkout 'feature/client'
+cd -
+
 # move the working path and build
 cd .gopath/src/github.com/${OWNER}/${PROJECT_NAME}
+
 go get -d -v ./...
-if [ "$1" = "-release" ]; then
+if [ "x$1" = "-release" ]; then
 	go build -ldflags "-X main.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" -tags release -o ./bin/${BIN_NAME}
 else
 	go build -ldflags "-X main.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" -o ./bin/${BIN_NAME}
