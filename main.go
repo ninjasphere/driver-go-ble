@@ -38,7 +38,7 @@ var log = logger.GetLogger("driver-go-ble")
     self.bus.publish('$device/' + packet.device.replace(/[:\r\n]/g, '') + '/TEMPPATH/rssi', packet);*/
 
 func sendRssi(device string, waypoint string, rssi int8, conn *ninja.NinjaConnection) {
-	log.Infof(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
+	log.Debugf(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
 
 	packet, _ := simplejson.NewJson([]byte(`{
 			"device": "",
