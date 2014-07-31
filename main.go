@@ -123,6 +123,15 @@ func realMain() int {
 			client.Notify(device.Address, true, 45, 48, true, false)
 		}
 
+		device.Disconnected = func() {
+			log.Infof("Disconnceted from waypoint: %s", device.Address)
+
+			err := client.Connect(device.Address, device.PublicAddress)
+			if err != nil {
+				log.Errorf("Connect error:%s", err)
+			}
+		}
+
 		device.Notification = func(notification *gatt.Notification) {
 			//log.Printf("Got the notification!")
 
