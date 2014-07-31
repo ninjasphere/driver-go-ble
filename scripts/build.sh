@@ -30,7 +30,7 @@ git clone git@github.com:ninjasphere/go-ninja.git $GOPATH/src/github.com/ninjasp
 # move the working path and build
 cd .gopath/src/github.com/${OWNER}/${PROJECT_NAME}
 go get -d -v ./...
-if [ "$1" = "-release" ]; then
+if [ "x$1" = "-release" ]; then
 	go build -ldflags "-X main.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" -tags release -o ./bin/${BIN_NAME}
 else
 	go build -ldflags "-X main.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" -o ./bin/${BIN_NAME}
