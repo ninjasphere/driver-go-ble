@@ -1,28 +1,30 @@
-// +build ignore
-
 package main
 
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"os/signal"
 	"regexp"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/bitly/go-simplejson"
 	"github.com/ninjasphere/gatt"
+	"github.com/ninjasphere/go-ninja"
+	"github.com/ninjasphere/go-ninja/logger"
 )
 
-type WaypointPayload struct {
+type waypointPayload struct {
 	Sequence    uint8
 	AddressType uint8
 	Rssi        int8
 	Valid       uint8
 }
+
+// configure the agent logger
+var log = logger.GetLogger("driver-go-ble")
 
 /*  var packet = {
       device: this.vars.ieee,
@@ -34,23 +36,50 @@ type WaypointPayload struct {
 
     // XXX: Temporary remove me
     self.bus.publish('$device/' + packet.device.replace(/[:\r\n]/g, '') + '/TEMPPATH/rssi', packet);*/
-func handleRssi(device string, waypoint string, rssi int8) {
-	log.Printf(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
+
+func sendRssi(device string, waypoint string, rssi int8, conn *ninja.NinjaConnection) {
+	log.Infof(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
+
+	packet, _ := simplejson.NewJson([]byte(`{
+			"device": "",
+			"waypoint": "",
+			"rssi": 0
+	}`))
+	packet.Set("device", device)
+	packet.Set("waypoint", waypoint)
+	packet.Set("rssi", rssi)
+
+	conn.PublishMessage("$device/"+device+"/TEMPPATH/rssi", packet)
 }
 
 func main() {
+	os.Exit(realMain())
+}
+
+func realMain() int {
+
+	// configure the agent logger
+	log := logger.GetLogger("driver-ble")
+
+	// main logic here
+	var conn, err = ninja.Connect("com.ninjablocks.ble")
+
+	if err != nil {
+		log.Errorf("Connect failed: %v", err)
+		return 1
+	}
 
 	out, err := exec.Command("hciconfig").Output()
 	if err != nil {
-		log.Fatal(err)
+		log.Errorf(fmt.Sprintf("Error: %s", err))
 	}
 	re := regexp.MustCompile("([0-9A-F]{2}\\:{0,1}){6}")
 	mac := strings.Replace(re.FindString(string(out)), ":", "", -1)
-	log.Printf("The local mac is %s\n", mac)
+	log.Infof("The local mac is %s\n", mac)
 
 	client := &gatt.Client{
 		StateChange: func(newState string) {
-			log.Println("Client state change: ", newState)
+			log.Infof("Client state change: %s", newState)
 		},
 		/*Rssi: func(address string, rssi int8) {
 		  log.Printf("Rssi update address:%s rssi:%d", address, rssi)
@@ -70,12 +99,12 @@ func main() {
 
 	client.Rssi = func(address string, rssi int8) {
 		//log.Printf("Rssi update address:%s rssi:%d", address, rssi)
-		handleRssi(strings.Replace(address, ":", "", -1), mac, rssi)
+		sendRssi(strings.Replace(address, ":", "", -1), mac, rssi, conn)
 		//spew.Dump(device);
 	}
 
 	client.Discover = func(device *gatt.DiscoveredDevice) {
-		log.Printf("Discovered address:%s rssi:%d", device.Address, device.Rssi)
+		log.Debugf("Discovered address:%s rssi:%d", device.Address, device.Rssi)
 
 		if device.Advertisement.LocalName != "NinjaSphereWaypoint" {
 			return
@@ -83,12 +112,12 @@ func main() {
 
 		err := client.Connect(device.Address, device.PublicAddress)
 		if err != nil {
-			log.Printf("Connect error:%s", err)
+			log.Errorf("Connect error:%s", err)
 		}
 
 		device.Connected = func() {
-			log.Print("Connected to:")
-			spew.Dump(device.Advertisement)
+			log.Infof("Connected to waypoint: %s", device.Address)
+			//spew.Dump(device.Advertisement)
 
 			// XXX: Yes, magic numbers.... this enables the notification from our Waypoints
 			client.Notify(device.Address, true, 45, 48, true, false)
@@ -98,17 +127,17 @@ func main() {
 			//log.Printf("Got the notification!")
 
 			//XXX: Add the ieee into the payload somehow??
-			var payload WaypointPayload
+			var payload waypointPayload
 			err := binary.Read(bytes.NewReader(notification.Data), binary.LittleEndian, &payload)
 			if err != nil {
-				log.Fatalf("Failed to read waypoint payload : %s", err)
+				log.Errorf("Failed to read waypoint payload : %s", err)
 			}
 
 			//	ieee := net.HardwareAddr(reverse(notification.Data[4:]))
 
 			//spew.Dump("ieee:", reverse(notification.Data[4:]), strings.ToUpper(ieee.String()), payload)
 
-			handleRssi(fmt.Sprintf("%x", reverse(notification.Data[4:])), strings.Replace(device.Address, ":", "", -1), payload.Rssi)
+			sendRssi(fmt.Sprintf("%x", reverse(notification.Data[4:])), strings.Replace(device.Address, ":", "", -1), payload.Rssi, conn)
 		}
 
 	}
@@ -116,12 +145,12 @@ func main() {
 	err = client.Start()
 
 	if err != nil {
-		log.Fatalf("Failed to start client: %s", err)
+		log.Errorf("Failed to start client: %s", err)
 	}
 
 	err = client.StartScanning(true)
 	if err != nil {
-		log.Fatalf("Failed to start scanning: %s", err)
+		log.Errorf("Failed to start scanning: %s", err)
 	}
 
 	c := make(chan os.Signal, 1)
@@ -129,7 +158,9 @@ func main() {
 
 	// Block until a signal is received.
 	s := <-c
-	log.Println("Got signal:", s)
+	log.Infof("Got signal:", s)
+
+	return 0
 }
 
 // reverse returns a reversed copy of u.
