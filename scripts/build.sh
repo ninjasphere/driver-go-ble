@@ -25,16 +25,21 @@ fi
 export GOPATH="$(pwd)/.gopath"
 
 # Clone our internal commons package
-git clone git@github.com:ninjasphere/go-ninja.git $GOPATH/src/github.com/ninjasphere/go-ninja
+if [ ! -d $GOPATH/src/github.com/ninjasphere/go-ninja ]; then
+	git clone git@github.com:ninjasphere/go-ninja.git $GOPATH/src/github.com/ninjasphere/go-ninja
+fi
 
 #check out special branch for dependency
-git clone -b 'feature/client' git@github.com:ninjasphere/gatt.git $GOPATH/src/github.com/ninjasphere/gatt
+if [ ! -d $GOPATH/src/github.com/ninjasphere/gatt ]; then
+	git clone -b 'feature/client' git@github.com:ninjasphere/gatt.git $GOPATH/src/github.com/ninjasphere/gatt
+fi
 
 # move the working path and build
 cd .gopath/src/github.com/${OWNER}/${PROJECT_NAME}
 
 go get -d -v ./...
-if [ ${GO_RELEASE} = "true" ]; then
+
+if [ "$BUILDBOX_BRANCH" = "master" ]; then
 	go build -ldflags "-X main.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" -tags release -o ./bin/${BIN_NAME}
 else
 	go build -ldflags "-X main.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" -o ./bin/${BIN_NAME}

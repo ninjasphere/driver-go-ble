@@ -14,7 +14,7 @@ func init() {
 	logger.GetLogger("").SetLogLevel(loggo.DEBUG)
 
 	bugsnag.Configure(bugsnag.Configuration{
-		APIKey:       "6e00c08c10fa060ce20db15943ac1063",
+		APIKey:       "7b66d4013bdcd0541287fd9b00376253",
 		ReleaseStage: "development",
 	})
 }
