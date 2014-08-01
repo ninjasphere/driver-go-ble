@@ -3,9 +3,6 @@ GOPATH=$(shell pwd)/.gopath
 debug:
 	scripts/build.sh
 
-release:
-	scripts/build.sh -release
-
 clean:
 	rm -f bin/driver-go-ble || true
 	rm -rf .gopath || true
@@ -17,4 +14,4 @@ test:
 vet:
 	go vet ./...
 
-.PHONY: debug release clean test
+.PHONY: debug clean test vet
