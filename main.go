@@ -26,25 +26,8 @@ type waypointPayload struct {
 // configure the agent logger
 var log = logger.GetLogger("driver-go-ble")
 
-/*  var packet = {
-      device: this.vars.ieee,
-      waypoint: nobleieeeToIEEE(peripheral.uuid),
-      rssi: this.vars.rssi
-    };
-
-    self.locatorDevice.sendEvent('locator', 'advertisement', packet);
-
-    // XXX: Temporary remove me
-    self.bus.publish('$device/' + packet.device.replace(/[:\r\n]/g, '') + '/TEMPPATH/rssi', packet);*/
-
 func sendRssi(device string, waypoint string, rssi int8, conn *ninja.NinjaConnection) {
 	log.Debugf(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
-
-	// packet, _ := simplejson.NewJson([]byte(`{
-	// 		"device": "",
-	// 		"waypoint": "",
-	// 		"rssi": 0
-	// }`))
 
 	packet, _ := simplejson.NewJson([]byte(`{
     "params": [
@@ -72,10 +55,6 @@ func main() {
 
 func realMain() int {
 
-	// configure the agent logger
-	// log := logger.GetLogger("driver-ble")
-
-	// main logic here
 	var conn, err = ninja.Connect("com.ninjablocks.ble")
 
 	if err != nil {
@@ -95,10 +74,6 @@ func realMain() int {
 		StateChange: func(newState string) {
 			log.Infof("Client state change: %s", newState)
 		},
-		/*Rssi: func(address string, rssi int8) {
-		  log.Printf("Rssi update address:%s rssi:%d", address, rssi)
-		  //spew.Dump(device);
-		},*/
 	}
 
 	/*
@@ -111,57 +86,65 @@ func realMain() int {
 	  }
 	*/
 
+	activeWaypoints := make(map[string]bool)
+
 	client.Rssi = func(address string, rssi int8) {
 		//log.Printf("Rssi update address:%s rssi:%d", address, rssi)
 		sendRssi(strings.Replace(address, ":", "", -1), mac, rssi, conn)
 		//spew.Dump(device);
 	}
 
-	client.Discover = func(device *gatt.DiscoveredDevice) {
+	client.Advertisement = func(device *gatt.DiscoveredDevice) {
 		log.Debugf("Discovered address:%s rssi:%d", device.Address, device.Rssi)
 
 		if device.Advertisement.LocalName != "NinjaSphereWaypoint" {
 			return
 		}
 
+		if activeWaypoints[device.Address] {
+			return
+		}
+
+		if device.Connected == nil {
+			device.Connected = func() {
+				log.Infof("Connected to waypoint: %s", device.Address)
+				//spew.Dump(device.Advertisement)
+
+				// XXX: Yes, magic numbers.... this enables the notification from our Waypoints
+				client.Notify(device.Address, true, 45, 48, true, false)
+			}
+
+			device.Disconnected = func() {
+				log.Infof("Disconnceted from waypoint: %s", device.Address)
+
+				activeWaypoints[device.Address] = false
+			}
+
+			device.Notification = func(notification *gatt.Notification) {
+				//log.Printf("Got the notification!")
+
+				//XXX: Add the ieee into the payload somehow??
+				var payload waypointPayload
+				err := binary.Read(bytes.NewReader(notification.Data), binary.LittleEndian, &payload)
+				if err != nil {
+					log.Errorf("Failed to read waypoint payload : %s", err)
+				}
+
+				//	ieee := net.HardwareAddr(reverse(notification.Data[4:]))
+
+				//spew.Dump("ieee:", reverse(notification.Data[4:]), strings.ToUpper(ieee.String()), payload)
+
+				sendRssi(fmt.Sprintf("%x", reverse(notification.Data[4:])), strings.Replace(device.Address, ":", "", -1), payload.Rssi, conn)
+			}
+		}
+
 		err := client.Connect(device.Address, device.PublicAddress)
 		if err != nil {
 			log.Errorf("Connect error:%s", err)
+			return
 		}
 
-		device.Connected = func() {
-			log.Infof("Connected to waypoint: %s", device.Address)
-			//spew.Dump(device.Advertisement)
-
-			// XXX: Yes, magic numbers.... this enables the notification from our Waypoints
-			client.Notify(device.Address, true, 45, 48, true, false)
-		}
-
-		device.Disconnected = func() {
-			log.Infof("Disconnceted from waypoint: %s", device.Address)
-
-			err := client.Connect(device.Address, device.PublicAddress)
-			if err != nil {
-				log.Errorf("Connect error:%s", err)
-			}
-		}
-
-		device.Notification = func(notification *gatt.Notification) {
-			//log.Printf("Got the notification!")
-
-			//XXX: Add the ieee into the payload somehow??
-			var payload waypointPayload
-			err := binary.Read(bytes.NewReader(notification.Data), binary.LittleEndian, &payload)
-			if err != nil {
-				log.Errorf("Failed to read waypoint payload : %s", err)
-			}
-
-			//	ieee := net.HardwareAddr(reverse(notification.Data[4:]))
-
-			//spew.Dump("ieee:", reverse(notification.Data[4:]), strings.ToUpper(ieee.String()), payload)
-
-			sendRssi(fmt.Sprintf("%x", reverse(notification.Data[4:])), strings.Replace(device.Address, ":", "", -1), payload.Rssi, conn)
-		}
+		activeWaypoints[device.Address] = true
 
 	}
 
