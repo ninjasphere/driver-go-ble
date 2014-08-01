@@ -40,15 +40,29 @@ var log = logger.GetLogger("driver-go-ble")
 func sendRssi(device string, waypoint string, rssi int8, conn *ninja.NinjaConnection) {
 	log.Debugf(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
 
-	packet, _ := simplejson.NewJson([]byte(`{
-			"device": "",
-			"waypoint": "",
-			"rssi": 0
-	}`))
-	packet.Set("device", device)
-	packet.Set("waypoint", waypoint)
-	packet.Set("rssi", rssi)
+	// packet, _ := simplejson.NewJson([]byte(`{
+	// 		"device": "",
+	// 		"waypoint": "",
+	// 		"rssi": 0
+	// }`))
 
+	packet, _ := simplejson.NewJson([]byte(`{
+    "params": [
+        {
+            "device": "",
+            "waypoint": "",
+            "rssi": 0,
+            "isSphere": true
+        },
+        "locator"
+    ],
+    "time": 0,
+    "jsonrpc": "2.0"
+}`))
+
+	packet.Get("params").GetIndex(0).Set("device", device)
+	packet.Get("params").GetIndex(0).Set("waypoint", waypoint)
+	packet.Get("params").GetIndex(0).Set("rssi", rssi)
 	conn.PublishMessage("$device/"+device+"/TEMPPATH/rssi", packet)
 }
 
@@ -59,7 +73,7 @@ func main() {
 func realMain() int {
 
 	// configure the agent logger
-	log := logger.GetLogger("driver-ble")
+	// log := logger.GetLogger("driver-ble")
 
 	// main logic here
 	var conn, err = ninja.Connect("com.ninjablocks.ble")
