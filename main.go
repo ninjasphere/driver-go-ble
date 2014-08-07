@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/bitly/go-simplejson"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ninjasphere/gatt"
 	"github.com/ninjasphere/go-ninja"
 	"github.com/ninjasphere/go-ninja/logger"
@@ -26,7 +27,7 @@ type waypointPayload struct {
 // configure the agent logger
 var log = logger.GetLogger("driver-go-ble")
 
-func sendRssi(device string, waypoint string, rssi int8, conn *ninja.NinjaConnection) {
+func sendRssi(device string, name string, waypoint string, rssi int8, isSphere bool, conn *ninja.NinjaConnection) {
 	log.Debugf(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
 
 	packet, _ := simplejson.NewJson([]byte(`{
@@ -44,8 +45,14 @@ func sendRssi(device string, waypoint string, rssi int8, conn *ninja.NinjaConnec
 }`))
 
 	packet.Get("params").GetIndex(0).Set("device", device)
+	if name != "" {
+		packet.Get("params").GetIndex(0).Set("name", name)
+	}
 	packet.Get("params").GetIndex(0).Set("waypoint", waypoint)
 	packet.Get("params").GetIndex(0).Set("rssi", rssi)
+	packet.Get("params").GetIndex(0).Set("isSphere", isSphere)
+
+	spew.Dump(packet)
 	conn.PublishMessage("$device/"+device+"/TEMPPATH/rssi", packet)
 }
 
@@ -88,9 +95,9 @@ func realMain() int {
 
 	activeWaypoints := make(map[string]bool)
 
-	client.Rssi = func(address string, rssi int8) {
+	client.Rssi = func(address string, name string, rssi int8) {
 		//log.Printf("Rssi update address:%s rssi:%d", address, rssi)
-		sendRssi(strings.Replace(address, ":", "", -1), mac, rssi, conn)
+		sendRssi(strings.Replace(address, ":", "", -1), name, mac, rssi, true, conn)
 		//spew.Dump(device);
 	}
 
@@ -115,7 +122,7 @@ func realMain() int {
 			}
 
 			device.Disconnected = func() {
-				log.Infof("Disconnceted from waypoint: %s", device.Address)
+				log.Infof("Disconnected from waypoint: %s", device.Address)
 
 				activeWaypoints[device.Address] = false
 			}
@@ -132,9 +139,9 @@ func realMain() int {
 
 				//	ieee := net.HardwareAddr(reverse(notification.Data[4:]))
 
-				//spew.Dump("ieee:", reverse(notification.Data[4:]), strings.ToUpper(ieee.String()), payload)
+				spew.Dump("ieee:", payload)
 
-				sendRssi(fmt.Sprintf("%x", reverse(notification.Data[4:])), strings.Replace(device.Address, ":", "", -1), payload.Rssi, conn)
+				sendRssi(fmt.Sprintf("%x", reverse(notification.Data[4:])), "", strings.Replace(device.Address, ":", "", -1), payload.Rssi, false, conn)
 			}
 		}
 
