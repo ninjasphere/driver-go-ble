@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ninjasphere/gatt"
 	"github.com/ninjasphere/go-ninja"
 	"github.com/ninjasphere/go-ninja/logger"
@@ -52,7 +51,7 @@ func sendRssi(device string, name string, waypoint string, rssi int8, isSphere b
 	packet.Get("params").GetIndex(0).Set("rssi", rssi)
 	packet.Get("params").GetIndex(0).Set("isSphere", isSphere)
 
-	spew.Dump(packet)
+	//spew.Dump(packet)
 	conn.PublishMessage("$device/"+device+"/TEMPPATH/rssi", packet)
 }
 
@@ -139,7 +138,7 @@ func realMain() int {
 
 				//	ieee := net.HardwareAddr(reverse(notification.Data[4:]))
 
-				spew.Dump("ieee:", payload)
+				//spew.Dump("ieee:", payload)
 
 				sendRssi(fmt.Sprintf("%x", reverse(notification.Data[4:])), "", strings.Replace(device.Address, ":", "", -1), payload.Rssi, false, conn)
 			}
