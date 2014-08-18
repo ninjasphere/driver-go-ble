@@ -1,0 +1,8 @@
+bin/*
+driver-go-ble
+sphere-serial
+sphere-config
+.gopath/*
+pkg/
+.AppleDouble
+.DS_Store
