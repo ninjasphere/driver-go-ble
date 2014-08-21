@@ -16,6 +16,8 @@ import (
 	"github.com/ninjasphere/go-ninja/logger"
 )
 
+const driverName = "driver-ble"
+
 type waypointPayload struct {
 	Sequence    uint8
 	AddressType uint8
@@ -61,12 +63,21 @@ func main() {
 
 func realMain() int {
 
+	log.Infof("Starting " + driverName)
+
 	var conn, err = ninja.Connect("com.ninjablocks.ble")
 
 	if err != nil {
-		log.Errorf("Connect failed: %v", err)
-		return 1
+		log.FatalErrorf(err, "Could not connect to MQTT Broker")
 	}
+
+	statusJob, err := ninja.CreateStatusJob(conn, driverName)
+
+	if err != nil {
+		log.FatalErrorf(err, "Could not setup status job")
+	}
+
+	statusJob.Start()
 
 	out, err := exec.Command("hciconfig").Output()
 	if err != nil {
