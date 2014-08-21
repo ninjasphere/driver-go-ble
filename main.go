@@ -168,12 +168,12 @@ func realMain() int {
 	err = client.Start()
 
 	if err != nil {
-		log.Errorf("Failed to start client: %s", err)
+		log.FatalError(err, "Failed to start client")
 	}
 
 	err = client.StartScanning(true)
 	if err != nil {
-		log.Errorf("Failed to start scanning: %s", err)
+		log.FatalError(err, "Failed to start scanning")
 	}
 
 	c := make(chan os.Signal, 1)
