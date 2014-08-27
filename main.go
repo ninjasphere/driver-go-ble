@@ -29,6 +29,8 @@ type waypointPayload struct {
 var log = logger.GetLogger("driver-go-ble")
 
 func sendRssi(device string, name string, waypoint string, rssi int8, isSphere bool, conn *ninja.NinjaConnection) {
+	device = strings.ToUpper(device)
+
 	log.Debugf(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
 
 	packet, _ := simplejson.NewJson([]byte(`{
