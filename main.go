@@ -40,8 +40,7 @@ func sendRssi(device string, name string, waypoint string, rssi int8, isSphere b
             "waypoint": "",
             "rssi": 0,
             "isSphere": true
-        },
-        "locator"
+        }
     ],
     "time": 0,
     "jsonrpc": "2.0"
