@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/bitly/go-simplejson"
 	"github.com/ninjasphere/gatt"
@@ -105,6 +106,24 @@ func realMain() int {
 	*/
 
 	activeWaypoints := make(map[string]bool)
+
+	go func() {
+		for {
+			time.Sleep(time.Second)
+			waypoints := 0
+			for id, active := range activeWaypoints {
+				log.Debugf("Waypoint %s is active? %t", id, active)
+				if active {
+					waypoints++
+				}
+			}
+			log.Debugf("%d waypoint(s) active", waypoints)
+
+			packet, _ := simplejson.NewJson([]byte(fmt.Sprintf("%d", waypoints)))
+
+			conn.PublishMessage("$location/waypoints", packet)
+		}
+	}()
 
 	client.Rssi = func(address string, name string, rssi int8) {
 		//log.Printf("Rssi update address:%s rssi:%d", address, rssi)
