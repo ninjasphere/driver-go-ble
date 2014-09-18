@@ -26,8 +26,17 @@ type waypointPayload struct {
 	Valid       uint8
 }
 
+type adPacket struct {
+	Device   string `json:"device"`
+	Waypoint string `json:"waypoint"`
+	Rssi     int8   `json:"rssi"`
+	IsSphere bool   `json:"isSphere"`
+}
+
 // configure the agent logger
 var log = logger.GetLogger("driver-go-ble")
+
+//var mesh *udpMesh
 
 func sendRssi(device string, name string, waypoint string, rssi int8, isSphere bool, conn *ninja.NinjaConnection) {
 	device = strings.ToUpper(device)
@@ -57,6 +66,7 @@ func sendRssi(device string, name string, waypoint string, rssi int8, isSphere b
 
 	//spew.Dump(packet)
 	conn.PublishMessage("$device/"+device+"/TEMPPATH/rssi", packet)
+
 }
 
 func main() {
@@ -67,11 +77,19 @@ func realMain() int {
 
 	log.Infof("Starting " + driverName)
 
-	var conn, err = ninja.Connect("com.ninjablocks.ble")
+	conn, err := ninja.Connect("com.ninjablocks.ble")
 
 	if err != nil {
 		log.FatalErrorf(err, "Could not connect to MQTT Broker")
 	}
+
+	/*if mesh, err = newUdpMesh("239.255.12.34:12345", func(packet *adPacket) {
+
+		spew.Dump("Got mesh packet", packet)
+
+	}); err != nil {
+		log.FatalErrorf(err, "Could not connect to UDP mesh")
+	}*/
 
 	statusJob, err := ninja.CreateStatusJob(conn, driverName)
 
@@ -171,7 +189,15 @@ func realMain() int {
 
 				//spew.Dump("ieee:", payload)
 
-				sendRssi(fmt.Sprintf("%x", reverse(notification.Data[4:])), "", strings.Replace(device.Address, ":", "", -1), payload.Rssi, false, conn)
+				packet := &adPacket{
+					Device:   fmt.Sprintf("%x", reverse(notification.Data[4:])),
+					Waypoint: strings.Replace(device.Address, ":", "", -1),
+					Rssi:     payload.Rssi,
+					IsSphere: false,
+				}
+
+				sendRssi(packet.Device, "", packet.Waypoint, packet.Rssi, packet.IsSphere, conn)
+				//mesh.send(packet)
 			}
 		}
 
