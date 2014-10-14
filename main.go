@@ -11,9 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitly/go-simplejson"
 	"github.com/ninjasphere/gatt"
-	"github.com/ninjasphere/go-ninja"
+	"github.com/ninjasphere/go-ninja/api"
 	"github.com/ninjasphere/go-ninja/logger"
 )
 
@@ -33,39 +32,33 @@ type adPacket struct {
 	IsSphere bool   `json:"isSphere"`
 }
 
+type ninjaPacket struct {
+     adPacket
+     name	string `json:"name,omitempty"`
+}
+
 // configure the agent logger
 var log = logger.GetLogger("driver-go-ble")
 
 //var mesh *udpMesh
 
-func sendRssi(device string, name string, waypoint string, rssi int8, isSphere bool, conn *ninja.NinjaConnection) {
+func sendRssi(device string, name string, waypoint string, rssi int8, isSphere bool, conn *ninja.Connection) {
 	device = strings.ToUpper(device)
 
 	log.Debugf(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
 
-	packet, _ := simplejson.NewJson([]byte(`{
-    "params": [
-        {
-            "device": "",
-            "waypoint": "",
-            "rssi": 0,
-            "isSphere": true
-        }
-    ],
-    "time": 0,
-    "jsonrpc": "2.0"
-}`))
-
-	packet.Get("params").GetIndex(0).Set("device", device)
-	if name != "" {
-		packet.Get("params").GetIndex(0).Set("name", name)
+	ninjaPacket := ninjaPacket{
+		    adPacket: adPacket{
+			Device: device,
+			Waypoint: waypoint,
+			Rssi: rssi,
+			IsSphere: isSphere,
+		    },
+		    name: name,
 	}
-	packet.Get("params").GetIndex(0).Set("waypoint", waypoint)
-	packet.Get("params").GetIndex(0).Set("rssi", rssi)
-	packet.Get("params").GetIndex(0).Set("isSphere", isSphere)
 
 	//spew.Dump(packet)
-	conn.PublishMessage("$device/"+device+"/TEMPPATH/rssi", packet)
+	conn.SendNotification("$device/"+device+"/TEMPPATH/rssi", ninjaPacket)
 
 }
 
@@ -137,9 +130,7 @@ func realMain() int {
 			}
 			log.Debugf("%d waypoint(s) active", waypoints)
 
-			packet, _ := simplejson.NewJson([]byte(fmt.Sprintf("%d", waypoints)))
-
-			conn.PublishMessage("$location/waypoints", packet)
+			conn.SendNotification("$location/waypoints", waypoints)
 		}
 	}()
 
