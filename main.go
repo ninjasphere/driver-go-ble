@@ -165,7 +165,7 @@ func realMain() int {
 
 		if device.Connected == nil {
 			device.Connected = func() {
-				log.Infof("Connected to waypoint: %s", device.Address)
+				log.Debugf("Connected to waypoint: %s", device.Address)
 				//spew.Dump(device.Advertisement)
 
 				// XXX: Yes, magic numbers.... this enables the notification from our Waypoints
@@ -173,7 +173,7 @@ func realMain() int {
 			}
 
 			device.Disconnected = func() {
-				log.Infof("Disconnected from waypoint: %s", device.Address)
+				log.Debugf("Disconnected from waypoint: %s", device.Address)
 
 				activeWaypoints[device.Address] = false
 			}
