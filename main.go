@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 	"github.com/ninjasphere/gatt"
 	"github.com/ninjasphere/go-ninja/api"
 	"github.com/ninjasphere/go-ninja/logger"
@@ -33,8 +35,11 @@ type adPacket struct {
 }
 
 type ninjaPacket struct {
-     adPacket
-     name	string `json:"name,omitempty"`
+	Device   string `json:"device"`
+	Waypoint string `json:"waypoint"`
+	Rssi     int8   `json:"rssi"`
+	IsSphere bool   `json:"isSphere"`
+	name 	 string `json:"name,omitempty"`
 }
 
 // configure the agent logger
@@ -48,18 +53,25 @@ func sendRssi(device string, name string, waypoint string, rssi int8, isSphere b
 	log.Debugf(">> Device:%s Waypoint:%s Rssi: %d", device, waypoint, rssi)
 
 	ninjaPacket := ninjaPacket{
-		    adPacket: adPacket{
-			Device: device,
-			Waypoint: waypoint,
-			Rssi: rssi,
-			IsSphere: isSphere,
-		    },
-		    name: name,
+		Device:   device,
+		Waypoint: waypoint,
+		Rssi:     rssi,
+		IsSphere: isSphere,
+		name: name,
 	}
 
 	//spew.Dump(packet)
 	conn.SendNotification("$device/"+device+"/TEMPPATH/rssi", ninjaPacket)
 
+}
+
+func publishMessage(conn *ninja.Connection, topic string, packet interface{}) {
+	p, err := json.Marshal(packet)
+	if err == nil {
+		conn.GetMqttClient().Publish(mqtt.QoS(0), topic, p)
+	} else {
+		log.Fatalf("marshalling error for %v", packet)
+	}
 }
 
 func main() {
@@ -130,7 +142,7 @@ func realMain() int {
 			}
 			log.Debugf("%d waypoint(s) active", waypoints)
 
-			conn.SendNotification("$location/waypoints", waypoints)
+			publishMessage(conn, "$location/waypoints", waypoints)
 		}
 	}()
 
